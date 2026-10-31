@@ -1575,7 +1575,6 @@ export default function CoursesPage() {
                   <Send className="w-4 h-4" />
                   <span>Enquire Now</span>
                 </button>
-
                 <a
                   href="https://wa.me/919634299858?text=Hello%20MSI%20Admissions%20Team%2C%20I%20have%20questions%20about%20your%20courses."
                   target="_blank"

@@ -131,4 +131,3 @@ export async function getDb(dbName = 'msi_db'): Promise<Db | null> {
   if (!client) return null;
   return client.db(process.env.MONGODB_DB_NAME || dbName);
 }
-
