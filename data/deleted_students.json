@@ -21,5 +21,17 @@
     "deletedAt": "2026-10-24T16:58:19.166Z"
   },
   {
-
+    "id": "msi-stu-6622",
+    "phone": "9977556622",
+    "email": "student.6622@msi-institutes.edu.in",
+    "name": "Renu",
+    "deletedAt": "2026-10-28T09:38:15.544Z"
+  },
+  {
+    "id": "staff-harshit",
+    "phone": "9792303434",
+    "email": "student.3434@msi-institutes.edu.in",
+    "name": "Student 3434",
+    "deletedAt": "2026-10-28T08:55:01.533Z"
+  }
 ]
