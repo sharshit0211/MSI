@@ -103,21 +103,23 @@ export async function getMongoClient(): Promise<MongoClient | null> {
     return null;
   }
 
-  if (process.env.NODE_ENV === 'development') {
-    if (!global._mongoClientPromise) {
-      global._mongoClientPromise = connectClient(uri);
-    }
-    clientPromise = global._mongoClientPromise;
-  } else {
-    if (!clientPromise) {
-      clientPromise = connectClient(uri);
-    }
+  // Use global variable across both development and serverless production (Vercel)
+  // so warm serverless lambda invocations reuse existing TCP connections.
+  if (!global._mongoClientPromise) {
+    global._mongoClientPromise = connectClient(uri).catch((err) => {
+      console.error('[MongoDB] Connection attempt failed:', err?.message || err);
+      global._mongoClientPromise = undefined;
+      throw err;
+    });
   }
 
+  clientPromise = global._mongoClientPromise;
+
   try {
-    return await clientPromise;
-  } catch (err) {
-    console.error('[MongoDB] Connection error:', err);
+    const connectedClient = await clientPromise;
+    return connectedClient;
+  } catch (err: any) {
+    console.error('[MongoDB] Connection error:', err?.message || err);
     global._mongoClientPromise = undefined;
     clientPromise = null;
     return null;
@@ -129,4 +131,3 @@ export async function getDb(dbName = 'msi_db'): Promise<Db | null> {
   if (!client) return null;
   return client.db(process.env.MONGODB_DB_NAME || dbName);
 }
-
