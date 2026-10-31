@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
@@ -92,6 +92,8 @@ import { Lead } from '@/components/reception/data/leadsMockData';
 import { ReceptionistRecord } from '@/lib/receptionistStore';
 import { GalleryItem } from '../api/admin/gallery/route';
 import { AdminTransaction } from '../api/admin/transactions/route';
+import * as XLSX from 'xlsx';
+import ExcelLeadManagerModal from '@/components/super-admin/ExcelLeadManagerModal';
 
 
 type AdminTab =
@@ -145,7 +147,7 @@ export default function SuperAdminMasterDashboard() {
     setTimeout(() => setToastMessage(null), 3600);
   };
 
-  // ── Modals State ────────────────────────────────────────────────────────────
+  // â”€â”€ Modals State â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // 1. Add Student Modal
   const [showAddStudentModal, setShowAddStudentModal] = useState(false);
   const [newStudentName, setNewStudentName] = useState('');
@@ -226,6 +228,16 @@ export default function SuperAdminMasterDashboard() {
   const [newGalleryTagline, setNewGalleryTagline] = useState('Campus Excellence');
   const [newGalleryDesc, setNewGalleryDesc] = useState('');
   const [isSubmittingGallery, setIsSubmittingGallery] = useState(false);
+
+  // 5b. Edit Gallery Item Modal
+  const [galleryToEdit, setGalleryToEdit] = useState<GalleryItem | null>(null);
+  const [editGalleryTitle, setEditGalleryTitle] = useState('');
+  const [editGalleryCategory, setEditGalleryCategory] = useState<'institute' | 'labs' | 'library' | 'events'>('institute');
+  const [editGalleryImage, setEditGalleryImage] = useState('');
+  const [editGalleryTagline, setEditGalleryTagline] = useState('Campus Excellence');
+  const [editGalleryDesc, setEditGalleryDesc] = useState('');
+  const [editGallerySpan, setEditGallerySpan] = useState<'normal' | 'wide'>('normal');
+  const [isUpdatingGallery, setIsUpdatingGallery] = useState(false);
 
   // 6. Delete Gallery Item
   const [galleryToDelete, setGalleryToDelete] = useState<GalleryItem | null>(null);
@@ -406,7 +418,7 @@ export default function SuperAdminMasterDashboard() {
           invoiceNumber: verifyData.invoiceNumber || 'INV-MSI-2026-TEST',
           timestamp: new Date().toLocaleTimeString('en-IN'),
         });
-        showToast(`Gateway Handshake Passed! Latency: ${latency}ms • HMAC Signature Verified ✓`);
+        showToast(`Gateway Handshake Passed! Latency: ${latency}ms â€¢ HMAC Signature Verified âœ“`);
         fetchTransactions();
       } else {
         throw new Error(verifyData.message || 'HMAC Signature verification rejected');
@@ -418,7 +430,7 @@ export default function SuperAdminMasterDashboard() {
     }
   };
 
-  // ── Authentication Check ────────────────────────────────────────────────────
+  // â”€â”€ Authentication Check â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const isLoggedIn =
       localStorage.getItem('msi_superadmin_logged_in') === 'true' ||
@@ -462,7 +474,7 @@ export default function SuperAdminMasterDashboard() {
     showToast('Logged out of Super Admin Master Portal.');
   };
 
-  // ── Live Clock ─────────────────────────────────────────────────────────────
+  // â”€â”€ Live Clock â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
@@ -478,14 +490,14 @@ export default function SuperAdminMasterDashboard() {
         second: '2-digit',
         hour12: true,
       });
-      setCurrentDateTime(`${dateStr} • ${timeStr}`);
+      setCurrentDateTime(`${dateStr} â€¢ ${timeStr}`);
     };
     updateTime();
     const timer = setInterval(updateTime, 1000);
     return () => clearInterval(timer);
   }, []);
 
-  // ── Master Data Fetchers ───────────────────────────────────────────────────
+  // â”€â”€ Master Data Fetchers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const fetchStudents = useCallback(async () => {
     try {
       const res = await fetch('/api/admin/students', { cache: 'no-store' });
@@ -654,7 +666,7 @@ export default function SuperAdminMasterDashboard() {
     }
   }, [activeTab, isAuthenticated, fetchStudents, fetchLeads, fetchReceptionists, fetchFaculty, fetchCourses, fetchTransactions]);
 
-  // ── Action Handlers ────────────────────────────────────────────────────────
+  // â”€â”€ Action Handlers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   // 1. Add Student
   const handleCreateStudent = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -687,12 +699,16 @@ export default function SuperAdminMasterDashboard() {
           stream: newStudentStream,
           pass: assignedPassword,
         });
-        showToast(`Student ${newStudentName} registered and saved to disk.`);
+        showToast(`Student ${newStudentName} registered successfully and synced to database.`);
         setShowAddStudentModal(false);
         setNewStudentName('');
         setNewStudentPhone('');
         setNewStudentEmail('');
-        fetchStudents();
+        if (Array.isArray(data.students)) {
+          setStudents(data.students);
+        } else {
+          fetchStudents();
+        }
         try {
           window.dispatchEvent(new Event('storage'));
         } catch (_) {}
@@ -924,6 +940,53 @@ export default function SuperAdminMasterDashboard() {
     }
   };
 
+  // 3b-2. Export Leads to Excel (.xlsx)
+  const handleExportLeadsToExcel = () => {
+    try {
+      if (filteredLeads.length === 0) {
+        showToast('No leads available to export.');
+        return;
+      }
+      const dataToExport = filteredLeads.map((l, idx) => ({
+        '#': idx + 1,
+        'Lead ID': l.id,
+        'Candidate Name': l.name,
+        'Mobile Number': l.mobile,
+        'Location / City': l.location,
+        'Target Course': l.targetCourse,
+        'Lead Source': l.source,
+        'Status': l.status,
+        'Assigned Telecaller': l.agent,
+        'Latest Remark': l.latestRemark,
+        'Received Date': l.receivedDate,
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(dataToExport);
+      ws['!cols'] = [
+        { wch: 6 },
+        { wch: 22 },
+        { wch: 22 },
+        { wch: 18 },
+        { wch: 20 },
+        { wch: 32 },
+        { wch: 28 },
+        { wch: 14 },
+        { wch: 30 },
+        { wch: 45 },
+        { wch: 20 },
+      ];
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'MSI_Leads');
+      const filename = `MSI_Leads_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+      XLSX.writeFile(wb, filename);
+      showToast(`Exported ${filteredLeads.length} leads to ${filename}!`);
+    } catch (err) {
+      console.error(err);
+      showToast('Error exporting leads to Excel.');
+    }
+  };
+
   // 3c. Bulk Import Leads (Excel / CSV)
   const handleBulkImportLeads = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1107,8 +1170,43 @@ export default function SuperAdminMasterDashboard() {
     }
   };
 
+  // Helper for image compression to keep base64 within Vercel body limits
+  const compressImageFile = (file: File, maxWidth = 1600, quality = 0.85): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const raw = event.target?.result as string;
+        if (!raw) return resolve('');
+        if (typeof window === 'undefined') return resolve(raw);
+        const img = new window.Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/webp', quality);
+            resolve(dataUrl);
+          } else {
+            resolve(raw);
+          }
+        };
+        img.onerror = () => resolve(raw);
+        img.src = raw;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
   // 4. Add Gallery Media (Direct File Upload & Instant Sync)
-  const handleGalleryFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleGalleryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -1117,14 +1215,109 @@ export default function SuperAdminMasterDashboard() {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      const base64 = event.target?.result as string;
-      if (base64) {
-        setNewGalleryImage(base64);
+    try {
+      const compressed = await compressImageFile(file);
+      if (compressed) {
+        setNewGalleryImage(compressed);
       }
-    };
-    reader.readAsDataURL(file);
+    } catch (_) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        if (base64) {
+          setNewGalleryImage(base64);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // 4b. Edit Gallery Media File Change
+  const handleEditGalleryFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      showToast('Please select a valid image file (PNG, JPG, WEBP).');
+      return;
+    }
+
+    try {
+      const compressed = await compressImageFile(file);
+      if (compressed) {
+        setEditGalleryImage(compressed);
+      }
+    } catch (_) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        if (base64) {
+          setEditGalleryImage(base64);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleOpenEditGallery = (item: GalleryItem) => {
+    setGalleryToEdit(item);
+    setEditGalleryTitle(item.title);
+    setEditGalleryCategory(item.category);
+    setEditGalleryImage(item.image);
+    setEditGalleryTagline(item.tagline || 'Campus Excellence');
+    setEditGalleryDesc(item.desc || '');
+    setEditGallerySpan(item.span || 'normal');
+  };
+
+  const handleUpdateGallery = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!galleryToEdit || !editGalleryTitle.trim() || !editGalleryImage.trim()) {
+      showToast('Please specify title and provide an image.');
+      return;
+    }
+
+    setIsUpdatingGallery(true);
+    try {
+      const res = await fetch('/api/admin/gallery', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: galleryToEdit.id,
+          title: editGalleryTitle.trim(),
+          category: editGalleryCategory,
+          image: editGalleryImage.trim(),
+          tagline: editGalleryTagline.trim(),
+          desc: editGalleryDesc.trim(),
+          span: editGallerySpan,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        showToast('Gallery media updated successfully! Live on /gallery.');
+        setGalleryToEdit(null);
+        if (Array.isArray(data.items)) {
+          setGalleryItems(data.items);
+        } else {
+          fetchGallery();
+        }
+        try {
+          window.dispatchEvent(new Event('msi_gallery_sync'));
+          window.dispatchEvent(new Event('storage'));
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            const bc = new BroadcastChannel('msi_sync_channel');
+            bc.postMessage({ type: 'GALLERY_UPDATED' });
+            bc.close();
+          }
+        } catch (_) {}
+      } else {
+        showToast(data.message || 'Failed to update gallery media.');
+      }
+    } catch (err) {
+      showToast('Network error while updating gallery media.');
+    } finally {
+      setIsUpdatingGallery(false);
+    }
   };
 
   const handleCreateGallery = async (e: React.FormEvent) => {
@@ -1154,10 +1347,19 @@ export default function SuperAdminMasterDashboard() {
         setShowAddGalleryModal(false);
         setNewGalleryTitle('');
         setNewGalleryDesc('');
-        fetchGallery();
+        if (Array.isArray(data.items)) {
+          setGalleryItems(data.items);
+        } else {
+          fetchGallery();
+        }
         try {
           window.dispatchEvent(new Event('msi_gallery_sync'));
           window.dispatchEvent(new Event('storage'));
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            const bc = new BroadcastChannel('msi_sync_channel');
+            bc.postMessage({ type: 'GALLERY_UPDATED' });
+            bc.close();
+          }
         } catch (_) {}
       } else {
         showToast(data.message || 'Failed to upload gallery media.');
@@ -1180,10 +1382,19 @@ export default function SuperAdminMasterDashboard() {
       if (data.success) {
         showToast('Media removed from website gallery.');
         setGalleryToDelete(null);
-        fetchGallery();
+        if (Array.isArray(data.items)) {
+          setGalleryItems(data.items);
+        } else {
+          fetchGallery();
+        }
         try {
           window.dispatchEvent(new Event('msi_gallery_sync'));
           window.dispatchEvent(new Event('storage'));
+          if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+            const bc = new BroadcastChannel('msi_sync_channel');
+            bc.postMessage({ type: 'GALLERY_UPDATED' });
+            bc.close();
+          }
         } catch (_) {}
       } else {
         showToast(data.message || 'Failed to delete gallery item.');
@@ -1977,7 +2188,7 @@ export default function SuperAdminMasterDashboard() {
   };
 
 
-  // ── Filtered Search Results ────────────────────────────────────────────────
+  // â”€â”€ Filtered Search Results â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const filteredStudents = useMemo(() => {
     if (!searchQuery.trim()) return students;
     const q = searchQuery.toLowerCase();
@@ -2001,7 +2212,7 @@ export default function SuperAdminMasterDashboard() {
     );
   }, [leads, searchQuery]);
 
-  // ── Render Gatekeeper if Unauthenticated ───────────────────────────────────
+  // â”€â”€ Render Gatekeeper if Unauthenticated â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#FFF9EF] flex flex-col justify-between selection:bg-[#EFC988] selection:text-[#89190E] relative overflow-hidden">
@@ -2121,7 +2332,7 @@ export default function SuperAdminMasterDashboard() {
             </form>
 
             <div className="mt-6 pt-4 border-t border-[#E8DCCB]/60 text-center text-[11px] text-[#526174]">
-              Protected by SHA-256 session encryption • MSI Institutional Server
+              Protected by SHA-256 session encryption â€¢ MSI Institutional Server
             </div>
           </div>
         </main>
@@ -2129,7 +2340,7 @@ export default function SuperAdminMasterDashboard() {
     );
   }
 
-  // ── Render Authenticated Master Dashboard ──────────────────────────────────
+  // â”€â”€ Render Authenticated Master Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   return (
     <div className="min-h-screen bg-[#F8F9FD] text-[#071B37] antialiased flex">
       {/* Toast Notification */}
@@ -2140,7 +2351,7 @@ export default function SuperAdminMasterDashboard() {
         </div>
       )}
 
-      {/* ── Fixed Sidebar (Matching code.html design) ────────────────────────── */}
+      {/* â”€â”€ Fixed Sidebar (Matching code.html design) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <aside className="fixed left-0 top-0 bottom-0 w-[260px] bg-white z-50 flex flex-col border-r border-[#E8EEFF] shadow-[0_1px_8px_rgba(0,0,0,0.04)] select-none">
         {/* Brand header */}
         <div className="p-4 flex items-center gap-3">
@@ -2353,7 +2564,7 @@ export default function SuperAdminMasterDashboard() {
         </div>
       </aside>
 
-      {/* ── Main View Container ─────────────────────────────────────────────── */}
+      {/* â”€â”€ Main View Container â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="pl-[260px] flex-1 flex flex-col min-w-0">
         {/* Fixed Top Header (Matching code.html design) */}
         <header className="sticky top-0 h-16 bg-white/95 backdrop-blur-md shadow-[0_1px_8px_rgba(0,0,0,0.04)] z-40 flex items-center justify-between px-6 border-b border-[#E8EEFF]">
@@ -2402,7 +2613,7 @@ export default function SuperAdminMasterDashboard() {
           </div>
         </header>
 
-        {/* ── Tab Content ────────────────────────────────────────────────────── */}
+        {/* â”€â”€ Tab Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
         <main className="p-6 sm:p-8 space-y-6">
           {/* TAB 1: EXECUTIVE DASHBOARD */}
           {activeTab === 'dashboard' && (
@@ -2418,7 +2629,7 @@ export default function SuperAdminMasterDashboard() {
                     Good Morning, Administrator
                   </h1>
                   <p className="text-xs text-[#58413D] mt-0.5">
-                    Live operational overview for MSI Group of Institutes • All data synced with permanent storage
+                    Live operational overview for MSI Group of Institutes â€¢ All data synced with permanent storage
                   </p>
                 </div>
 
@@ -2617,7 +2828,7 @@ export default function SuperAdminMasterDashboard() {
                     </div>
                     <div className="flex items-center gap-1 text-[11px] text-[#89190E] font-bold mt-0.5">
                       <Sparkles className="w-3 h-3" />
-                      <span>CLAT • Judiciary • NET</span>
+                      <span>CLAT â€¢ Judiciary â€¢ NET</span>
                     </div>
                   </div>
                   <div className="mt-2 text-[10px] text-[#58413D] truncate border-t border-gray-100 pt-1.5">
@@ -2667,7 +2878,7 @@ export default function SuperAdminMasterDashboard() {
                   </div>
                   <div>
                     <div className="font-serif text-3xl font-bold text-[#89190E]">
-                      ₹4.85L
+                      â‚¹4.85L
                     </div>
                     <div className="flex items-center gap-1 text-[11px] text-emerald-600 font-bold mt-0.5">
                       <CheckCircle2 className="w-3 h-3" />
@@ -2812,7 +3023,7 @@ export default function SuperAdminMasterDashboard() {
                           Captured Fees
                         </span>
                         <div className="font-serif text-xl font-bold text-[#89190E] mt-0.5">
-                          ₹4,85,000
+                          â‚¹4,85,000
                         </div>
                         <span className="text-[10px] text-gray-500">142 settled orders</span>
                       </div>
@@ -2821,7 +3032,7 @@ export default function SuperAdminMasterDashboard() {
                           Avg Order Value
                         </span>
                         <div className="font-serif text-xl font-bold text-[#071B37] mt-0.5">
-                          ₹34,154
+                          â‚¹34,154
                         </div>
                         <span className="text-[10px] text-gray-500">Across legal batches</span>
                       </div>
@@ -2879,7 +3090,7 @@ export default function SuperAdminMasterDashboard() {
                         </h3>
                       </div>
                       <span className="px-2 py-0.5 rounded-full bg-red-100 text-[#89190E] text-[10px] font-bold animate-pulse">
-                        ● 1 In Progress
+                        â— 1 In Progress
                       </span>
                     </div>
 
@@ -2896,7 +3107,7 @@ export default function SuperAdminMasterDashboard() {
                             Judiciary CrPC Procedural Law Masterclass
                           </h4>
                           <p className="text-[11px] text-gray-500">
-                            Dr. Ekta Gahlawat • 48 Active Scholars
+                            Dr. Ekta Gahlawat â€¢ 48 Active Scholars
                           </p>
                         </div>
                         <Link
@@ -2920,7 +3131,7 @@ export default function SuperAdminMasterDashboard() {
                             CLAT Legal Reasoning & Case Briefing
                           </h4>
                           <p className="text-[11px] text-gray-500">
-                            Mr. Anurag Dwivedi • Afternoon Cohort
+                            Mr. Anurag Dwivedi â€¢ Afternoon Cohort
                           </p>
                         </div>
                         <span className="text-[10px] font-bold text-gray-400">Scheduled</span>
@@ -3008,7 +3219,7 @@ export default function SuperAdminMasterDashboard() {
                     Active Student Accounts ({filteredStudents.length})
                   </h2>
                   <p className="text-xs text-[#58413D] mt-0.5">
-                    Live disk-backed records. Hard-refresh safe • Deletions and additions sync with student portal.
+                    Live disk-backed records. Hard-refresh safe â€¢ Deletions and additions sync with student portal.
                   </p>
                 </div>
 
@@ -3065,7 +3276,7 @@ export default function SuperAdminMasterDashboard() {
                                 <span className="bg-gray-50 border border-gray-200 px-2 py-0.5 rounded text-[11px] font-bold text-[#89190E]">
                                   {showStudentPasswords[stu.phone]
                                     ? (stu.password || 'Student@MSI2026')
-                                    : '••••••••'}
+                                    : 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢'}
                                 </span>
                                 <button
                                   type="button"
@@ -3096,7 +3307,7 @@ export default function SuperAdminMasterDashboard() {
                               {stu.stream}
                             </td>
                             <td className="py-3.5 px-4 text-gray-500 font-mono text-[11px]">
-                              {stu.email || '—'}
+                              {stu.email || 'â€”'}
                             </td>
                             <td className="py-3.5 px-4 text-gray-500 font-mono text-[11px]">
                               {stu.registeredAt
@@ -3178,27 +3389,41 @@ export default function SuperAdminMasterDashboard() {
 
                 <div className="flex flex-wrap items-center gap-2.5">
                   <button
+                    type="button"
                     onClick={() => setShowMetaWebhookModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl border border-[#E8DCCB] hover:bg-[#FFF9EF] text-[#10233F] text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl border border-[#E8DCCB] hover:bg-[#FFF9EF] text-[#10233F] text-xs font-bold transition-all shadow-2xs cursor-pointer"
                   >
-                    <Share2 className="w-4 h-4 text-[#89190E]" />
-                    <span>Meta & Google Webhook</span>
+                    <Share2 className="w-3.5 h-3.5 text-[#89190E]" />
+                    <span>Meta Webhook</span>
                   </button>
 
                   <button
+                    type="button"
+                    onClick={handleExportLeadsToExcel}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-white hover:bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                    title="Export all current leads to an Excel spreadsheet (.xlsx)"
+                  >
+                    <Download className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Export to Excel (.xlsx)</span>
+                  </button>
+
+                  <button
+                    type="button"
                     onClick={() => setShowBulkLeadModal(true)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl bg-[#FFF9EF] hover:bg-[#FCEFD8] border border-[#EFC988] text-[#89190E] text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FFF9EF] hover:bg-[#FCEFD8] border border-[#EFC988] text-[#89190E] text-xs font-bold transition-all shadow-2xs cursor-pointer"
+                    title="Open Excel Studio to directly form an Excel sheet or upload spreadsheet"
                   >
-                    <FileSpreadsheet className="w-4 h-4" />
-                    <span>📥 Bulk Import (Excel / CSV)</span>
+                    <FileSpreadsheet className="w-4 h-4 text-[#89190E]" />
+                    <span>ðŸ“Š Excel Sheet Studio (Upload / Form Sheet)</span>
                   </button>
 
                   <button
+                    type="button"
                     onClick={() => setShowAddLeadModal(true)}
-                    className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-xl bg-[#89190E] hover:bg-[#65130D] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#89190E] hover:bg-[#65130D] text-white text-xs font-bold transition-all shadow-xs cursor-pointer"
                   >
                     <Plus className="w-4 h-4" />
-                    <span>+ Generate New Lead</span>
+                    <span>+ Generate Single Lead</span>
                   </button>
                 </div>
               </div>
@@ -3230,12 +3455,12 @@ export default function SuperAdminMasterDashboard() {
                         filteredLeads.map((ld) => {
                           const rowClass =
                             ld.status === 'Dead'
-                              ? 'border-l-4 border-l-red-500 bg-red-50/30 hover:bg-red-50/60'
+                              ? 'border-l-[6px] border-l-red-600 bg-red-100/90 hover:bg-red-200/90 border-b border-red-300 text-red-950 font-medium'
                               : ld.status === 'Converted'
-                              ? 'border-l-4 border-l-emerald-500 bg-emerald-50/30 hover:bg-emerald-50/60'
+                              ? 'border-l-[6px] border-l-emerald-600 bg-emerald-100/90 hover:bg-emerald-200/90 border-b border-emerald-300 text-emerald-950 font-medium'
                               : ld.status === 'Follow-up'
-                              ? 'border-l-4 border-l-amber-500 bg-amber-50/40 hover:bg-amber-50/70'
-                              : 'border-l-4 border-l-blue-500 bg-blue-50/20 hover:bg-blue-50/50';
+                              ? 'border-l-[6px] border-l-amber-500 bg-amber-100/90 hover:bg-amber-200/90 border-b border-amber-300 text-amber-950 font-medium'
+                              : 'border-l-[6px] border-l-blue-500 bg-blue-50/70 hover:bg-blue-100/70 border-b border-blue-200 text-[#10233F]';
 
                           return (
                             <tr key={ld.id} className={`transition-colors ${rowClass}`}>
@@ -3437,7 +3662,7 @@ export default function SuperAdminMasterDashboard() {
                             </div>
                           </td>
                           <td className="py-3 px-4 text-gray-500 font-mono text-[11px]">
-                            {rec.email || '—'}
+                            {rec.email || 'â€”'}
                           </td>
                           <td className="py-3 px-4">
                             <span className="inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
@@ -3663,7 +3888,7 @@ export default function SuperAdminMasterDashboard() {
                           {crs.category}
                         </span>
                         <span className="font-bold text-xs text-[#071B37]">
-                          ₹{crs.price.toLocaleString('en-IN')}
+                          â‚¹{crs.price.toLocaleString('en-IN')}
                         </span>
                       </div>
                       <h3 className="font-serif font-bold text-base text-[#071B37] mb-1">
@@ -3677,10 +3902,10 @@ export default function SuperAdminMasterDashboard() {
                           <strong>Assigned Faculty:</strong> <span className="text-[#89190E] font-bold">{crs.instructorName}</span>
                         </div>
                         <div>
-                          <strong>Curriculum:</strong> {crs.sections?.length || 0} Modules • {crs.totalDuration} • {crs.totalLectures || 0} Lectures
+                          <strong>Curriculum:</strong> {crs.sections?.length || 0} Modules â€¢ {crs.totalDuration} â€¢ {crs.totalLectures || 0} Lectures
                         </div>
                         <div>
-                          <strong>Rating:</strong> ⭐ {crs.rating} ({crs.reviewCount} reviews)
+                          <strong>Rating:</strong> â­ {crs.rating} ({crs.reviewCount} reviews)
                         </div>
 
                         {/* Recent Sequential Lectures Preview */}
@@ -3693,7 +3918,7 @@ export default function SuperAdminMasterDashboard() {
                               {crs.sections[0].lectures.slice(0, 3).map((lec) => (
                                 <div key={lec.id} className="flex items-center justify-between text-[10px] text-gray-600 truncate">
                                   <span className="truncate pr-1">
-                                    • {lec.title}
+                                    â€¢ {lec.title}
                                   </span>
                                   <span className="font-mono text-[9px] text-gray-400 shrink-0">{lec.duration}</span>
                                 </div>
@@ -3850,13 +4075,24 @@ export default function SuperAdminMasterDashboard() {
                         <span className="text-[10px] font-mono text-gray-400">
                           ID: #{item.id}
                         </span>
-                        <button
-                          onClick={() => setGalleryToDelete(item)}
-                          className="px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-600 hover:text-white text-red-600 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          <span>Delete</span>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => handleOpenEditGallery(item)}
+                            className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-600 hover:text-white text-blue-600 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                            title="Edit Gallery Media"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() => setGalleryToDelete(item)}
+                            className="px-2.5 py-1 rounded-lg bg-red-50 hover:bg-red-600 hover:text-white text-red-600 text-xs font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                            title="Delete Gallery Media"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -3937,7 +4173,7 @@ export default function SuperAdminMasterDashboard() {
                       Razorpay Node.js SDK
                     </span>
                     <span className="text-[10px] text-gray-500 font-mono">
-                      v2.9.6 • Order & Verify API
+                      v2.9.6 â€¢ Order & Verify API
                     </span>
                   </div>
                   <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
@@ -4184,7 +4420,7 @@ export default function SuperAdminMasterDashboard() {
                     Total Captured Revenue
                   </span>
                   <div className="font-serif font-bold text-2xl text-[#071B37] mt-1">
-                    ₹
+                    â‚¹
                     {(
                       transactions.reduce((acc, t) => acc + (t.amount || 0), 0) || 4999
                     ).toLocaleString('en-IN')}
@@ -4280,7 +4516,7 @@ export default function SuperAdminMasterDashboard() {
                             Legal Reasoning for CLAT
                           </td>
                           <td className="py-3.5 px-4 font-serif font-extrabold text-[#071B37]">
-                            ₹4,999
+                            â‚¹4,999
                           </td>
                           <td className="py-3.5 px-4 text-[#58413D]">
                             Razorpay UPI (Test Gateway)
@@ -4288,7 +4524,7 @@ export default function SuperAdminMasterDashboard() {
                           <td className="py-3.5 px-4">
                             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                               <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                              HMAC Verified ✓
+                              HMAC Verified âœ“
                             </span>
                           </td>
                           <td className="py-3.5 px-4 text-gray-500 font-mono text-[11px]">
@@ -4340,7 +4576,7 @@ export default function SuperAdminMasterDashboard() {
                               {txn.courseTitle}
                             </td>
                             <td className="py-3.5 px-4 font-serif font-extrabold text-[#071B37]">
-                              ₹{txn.amount?.toLocaleString('en-IN') || '4,999'}
+                              â‚¹{txn.amount?.toLocaleString('en-IN') || '4,999'}
                             </td>
                             <td className="py-3.5 px-4 text-[#58413D]">
                               {txn.paymentMethod || 'Razorpay Gateway'}
@@ -4348,7 +4584,7 @@ export default function SuperAdminMasterDashboard() {
                             <td className="py-3.5 px-4">
                               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] font-bold">
                                 <ShieldCheck className="w-3 h-3 text-emerald-600" />
-                                HMAC Verified ✓
+                                HMAC Verified âœ“
                               </span>
                             </td>
                             <td className="py-3.5 px-4 text-gray-500 font-mono text-[11px]">
@@ -4437,13 +4673,13 @@ export default function SuperAdminMasterDashboard() {
                       <div className="flex justify-between items-center pt-2 border-t border-[#E8DCCB]">
                         <span className="font-bold text-[#071B37] text-sm">Total Paid:</span>
                         <span className="font-serif font-extrabold text-[#89190E] text-lg">
-                          ₹{selectedTxnForReceipt.amount?.toLocaleString('en-IN')}
+                          â‚¹{selectedTxnForReceipt.amount?.toLocaleString('en-IN')}
                         </span>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between text-[11px] text-gray-500 font-mono mb-5">
-                      <span>Status: CAPTURED (Verified ✓)</span>
+                      <span>Status: CAPTURED (Verified âœ“)</span>
                       <span>Date: {selectedTxnForReceipt.timestamp}</span>
                     </div>
 
@@ -4472,7 +4708,7 @@ export default function SuperAdminMasterDashboard() {
         </main>
       </div>
 
-      {/* ── MODALS ─────────────────────────────────────────────────────────── */}
+      {/* â”€â”€ MODALS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {/* 1. Add Student Modal */}
       {showAddStudentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
@@ -4637,7 +4873,7 @@ export default function SuperAdminMasterDashboard() {
               <div className="flex justify-between py-1 border-b border-gray-200">
                 <span className="text-gray-500">Official Email:</span>
                 <span className="font-mono text-[#10233F]">
-                  {selectedStudentForView.email || '—'}
+                  {selectedStudentForView.email || 'â€”'}
                 </span>
               </div>
               <div className="flex justify-between py-1 border-b border-gray-200">
@@ -4749,7 +4985,7 @@ export default function SuperAdminMasterDashboard() {
                   <option value="">-- Choose a course program --</option>
                   {courses.map((crs) => (
                     <option key={crs.id} value={crs.id}>
-                      {crs.title} ({crs.category} • {crs.instructorName})
+                      {crs.title} ({crs.category} â€¢ {crs.instructorName})
                     </option>
                   ))}
                 </select>
@@ -5310,138 +5546,17 @@ export default function SuperAdminMasterDashboard() {
         </div>
       )}
 
-      {/* 4b. Bulk Import Leads Modal (Excel / CSV) */}
-      {showBulkLeadModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="w-full max-w-xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#E8DCCB] relative max-h-[92vh] overflow-y-auto">
-            <button
-              onClick={() => setShowBulkLeadModal(false)}
-              className="absolute top-5 right-5 text-gray-400 hover:text-gray-700 cursor-pointer"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-[#89190E]/10 text-[#89190E] flex items-center justify-center">
-                <FileSpreadsheet className="w-5 h-5" />
-              </div>
-              <div>
-                <h3 className="font-serif text-lg font-bold text-[#10233F]">
-                  Bulk Import Leads (Excel / CSV)
-                </h3>
-                <p className="text-xs text-gray-500">
-                  Import multiple inbound leads from Meta, Google Ads, or campus workshop spreadsheets.
-                </p>
-              </div>
-            </div>
-
-            <form onSubmit={handleBulkImportLeads} className="space-y-4">
-              <div className="grid grid-cols-3 gap-2.5">
-                <div>
-                  <label className="block text-[11px] font-bold uppercase text-[#10233F] mb-1">
-                    Default Source
-                  </label>
-                  <select
-                    value={bulkDefaultSource}
-                    onChange={(e) => setBulkDefaultSource(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-xl border border-[#E8DCCB] text-xs text-[#10233F]"
-                  >
-                    <option value="Meta Ads (Facebook/Instagram)">Meta Ads</option>
-                    <option value="Google Ads">Google Ads</option>
-                    <option value="College Workshop">College Workshop</option>
-                    <option value="Local Walk-in">Local Walk-in</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase text-[#10233F] mb-1">
-                    Default Course
-                  </label>
-                  <select
-                    value={bulkDefaultCourse}
-                    onChange={(e) => setBulkDefaultCourse(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-xl border border-[#E8DCCB] text-xs text-[#10233F]"
-                  >
-                    <option value="PCS-J Punjab Judicial Services">PCS-J Punjab</option>
-                    <option value="CLAT 2027 (2-Yr Class)">CLAT 2027</option>
-                    <option value="CLAT 2026 (1-Yr Target)">CLAT 2026</option>
-                    <option value="Judiciary Mains Answer Writing">Judiciary Mains</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-bold uppercase text-[#10233F] mb-1">
-                    Telecaller Assignee
-                  </label>
-                  <select
-                    value={bulkDefaultAgent}
-                    onChange={(e) => setBulkDefaultAgent(e.target.value)}
-                    className="w-full px-2.5 py-2 rounded-xl border border-[#E8DCCB] text-xs text-[#10233F]"
-                  >
-                    <option value="Auto Round-Robin Distribution">Auto Round-Robin</option>
-                    <option value="Harshit (Reception Desk)">Harshit</option>
-                    <option value="Counselor Priya (Law Admissions Desk)">Counselor Priya</option>
-                    <option value="Counselor Rohit (Judiciary Services Desk)">Counselor Rohit</option>
-                    <option value="Counselor Simran (CLAT & Entrance Desk)">Counselor Simran</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold uppercase text-[#10233F]">
-                    Paste CSV or Tab-Separated Excel Data
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setBulkLeadsText(
-                        `Priyanshu Verma, 9876543210, Chandigarh, PCS-J Punjab Judicial Services, Meta Ads, Harshit (Reception Desk), High intent lead\nRohan Khanna, 9812345678, Mohali, CLAT 2027 (2-Yr Class), Google Ads, Counselor Priya (Law Admissions Desk), Wants weekend demo batch\nSimran Kaur, 9898765432, Ludhiana, PCS-J Punjab Judicial Services, College Workshop, Counselor Rohit (Judiciary Services Desk), Met at campus law seminar`
-                      );
-                    }}
-                    className="text-xs text-[#89190E] font-bold hover:underline cursor-pointer"
-                  >
-                    Load Sample Excel Data
-                  </button>
-                </div>
-                <textarea
-                  rows={6}
-                  required
-                  value={bulkLeadsText}
-                  onChange={(e) => setBulkLeadsText(e.target.value)}
-                  placeholder="Format: Name, Mobile, City, Course, Source, Assigned Telecaller, Notes&#10;e.g. Rohit Sharma, 9876543210, Chandigarh, PCS-J, Meta Ads, Harshit, Demo requested"
-                  className="w-full p-3 rounded-2xl border border-[#E8DCCB] text-xs font-mono text-[#10233F] focus:outline-none focus:border-[#89190E]"
-                />
-                <p className="text-[11px] text-gray-500 mt-1">
-                  💡 You can copy rows directly from Excel or Google Sheets and paste here.
-                </p>
-              </div>
-
-              <div className="pt-2 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowBulkLeadModal(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-[#E8DCCB] text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isImportingBulk}
-                  className="flex-1 py-2.5 rounded-xl bg-[#89190E] hover:bg-[#65130D] text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs cursor-pointer"
-                >
-                  {isImportingBulk ? (
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Upload className="w-4 h-4" />
-                  )}
-                  <span>Import All Leads to CRM</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* 4b. Excel Sheet Studio & Bulk Lead Generator Modal */}
+      <ExcelLeadManagerModal
+        isOpen={showBulkLeadModal}
+        onClose={() => setShowBulkLeadModal(false)}
+        onLeadsGenerated={(count) => {
+          fetchLeads();
+          showToast(`Successfully generated and dispatched ${count} leads to Reception Desk!`);
+        }}
+        showToast={showToast}
+        existingLeads={leads}
+      />
 
       {/* 4c. Meta Ads Webhook Integration Guide (For Ankit) */}
       {showMetaWebhookModal && (
@@ -5516,7 +5631,7 @@ export default function SuperAdminMasterDashboard() {
                   How Ankit can configure Meta Lead Ads:
                 </span>
                 <ol className="list-decimal list-inside space-y-1.5 pl-1 leading-relaxed">
-                  <li>Go to <strong>Meta for Developers / Facebook Business Manager</strong> → Webhooks.</li>
+                  <li>Go to <strong>Meta for Developers / Facebook Business Manager</strong> â†’ Webhooks.</li>
                   <li>Subscribe to the <strong>Page</strong> object and check the <code>leadgen</code> topic.</li>
                   <li>Enter the Callback URL and Verify Token above. Verification is handled automatically.</li>
                   <li>Whenever an ad form is submitted on Instagram or Facebook, the lead is instantly parsed and routed to your telecallers!</li>
@@ -5650,7 +5765,7 @@ export default function SuperAdminMasterDashboard() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="text-[11px] font-bold text-emerald-700 block">
-                      ✓ Image Ready to Publish
+                      âœ“ Image Ready to Publish
                     </span>
                     <p className="text-[10px] text-gray-500 truncate font-mono">
                       {newGalleryImage.slice(0, 45)}...
@@ -5691,6 +5806,182 @@ export default function SuperAdminMasterDashboard() {
                     <Upload className="w-4 h-4" />
                   )}
                   <span>Publish to /gallery</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 5b. Edit Gallery Media Modal */}
+      {galleryToEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn overflow-y-auto">
+          <div className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#E8EEFF] my-8">
+            <div className="flex items-center justify-between mb-5 pb-3 border-b border-gray-100">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-serif text-lg font-bold text-[#10233F]">
+                    Edit Gallery Media #{galleryToEdit.id}
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    Update title, category, description, or photo. Reflects live on /gallery.
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setGalleryToEdit(null)}
+                className="w-8 h-8 rounded-full bg-gray-100 text-gray-500 hover:bg-gray-200 flex items-center justify-center cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateGallery} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase text-[#10233F] mb-1">
+                  Media Title *
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editGalleryTitle}
+                  onChange={(e) => setEditGalleryTitle(e.target.value)}
+                  placeholder="e.g. Moot Court Hall & Appellate Bench"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8DCCB] text-xs text-[#10233F] focus:outline-none focus:border-[#89190E]"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold uppercase text-[#10233F] mb-1">
+                    Category
+                  </label>
+                  <select
+                    value={editGalleryCategory}
+                    onChange={(e) =>
+                      setEditGalleryCategory(e.target.value as 'institute' | 'labs' | 'library' | 'events')
+                    }
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8DCCB] text-xs text-[#10233F] focus:outline-none focus:border-[#89190E]"
+                  >
+                    <option value="institute">Institute Spaces</option>
+                    <option value="labs">Legal Research & Test Labs</option>
+                    <option value="library">Central Library</option>
+                    <option value="events">Moot Courts & Events</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-[#10233F] mb-1">
+                    Display Layout
+                  </label>
+                  <select
+                    value={editGallerySpan}
+                    onChange={(e) => setEditGallerySpan(e.target.value as 'normal' | 'wide')}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8DCCB] text-xs text-[#10233F] focus:outline-none focus:border-[#89190E]"
+                  >
+                    <option value="normal">Standard (4:3 ratio)</option>
+                    <option value="wide">Wide Featured (16:9 ratio)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-[#10233F] mb-1">
+                  Tagline
+                </label>
+                <input
+                  type="text"
+                  value={editGalleryTagline}
+                  onChange={(e) => setEditGalleryTagline(e.target.value)}
+                  placeholder="e.g. Campus Excellence"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-[#E8DCCB] text-xs text-[#10233F] focus:outline-none focus:border-[#89190E]"
+                />
+              </div>
+
+              {/* Replace Photo */}
+              <div>
+                <label className="block text-xs font-bold uppercase text-[#10233F] mb-1">
+                  Change Photo (Optional - Browse new from device)
+                </label>
+                <div className="border-2 border-dashed border-[#E8DCCB] rounded-2xl p-3 text-center hover:border-blue-500 transition-colors bg-[#F8FAFC]">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    id="edit-gallery-file-input"
+                    onChange={handleEditGalleryFileChange}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="edit-gallery-file-input"
+                    className="cursor-pointer flex flex-col items-center justify-center space-y-1"
+                  >
+                    <Upload className="w-5 h-5 text-blue-600" />
+                    <span className="text-xs font-bold text-[#10233F]">
+                      Click to Choose New Photo
+                    </span>
+                    <span className="text-[10px] text-gray-500">
+                      Auto-compressed & optimized for high-speed cloud loading
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Current Preview */}
+              {editGalleryImage && (
+                <div className="p-2.5 rounded-xl bg-gray-50 border border-gray-200 flex items-center space-x-3">
+                  <div className="relative w-14 h-14 rounded-lg overflow-hidden border border-gray-300 bg-white shrink-0">
+                    <img
+                      src={editGalleryImage}
+                      alt="Preview"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[11px] font-bold text-blue-700 block">
+                      Active Photo Preview
+                    </span>
+                    <p className="text-[10px] text-gray-500 truncate font-mono">
+                      {editGalleryImage.slice(0, 45)}...
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold uppercase text-[#10233F] mb-1">
+                  Description
+                </label>
+                <textarea
+                  rows={2}
+                  value={editGalleryDesc}
+                  onChange={(e) => setEditGalleryDesc(e.target.value)}
+                  placeholder="Facility details, bare act libraries, and seating capacity."
+                  className="w-full px-3.5 py-2 rounded-xl border border-[#E8DCCB] text-xs text-[#10233F] focus:outline-none focus:border-[#89190E]"
+                />
+              </div>
+
+              <div className="pt-2 flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setGalleryToEdit(null)}
+                  className="flex-1 py-2.5 rounded-xl border border-gray-200 text-xs font-bold text-gray-600 hover:bg-gray-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUpdatingGallery}
+                  className="flex-1 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                >
+                  {isUpdatingGallery ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Check className="w-4 h-4" />
+                  )}
+                  <span>Save Changes</span>
                 </button>
               </div>
             </form>
@@ -6068,7 +6359,7 @@ export default function SuperAdminMasterDashboard() {
                     }}
                     className="text-[10px] text-[#89190E] font-bold hover:underline cursor-pointer"
                   >
-                    ⚡ Auto-Generate
+                    âš¡ Auto-Generate
                   </button>
                 </div>
                 <input
@@ -6285,7 +6576,7 @@ export default function SuperAdminMasterDashboard() {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase text-[#10233F] mb-1">
-                    Enrolment Fee (₹) *
+                    Enrolment Fee (â‚¹) *
                   </label>
                   <input
                     type="number"
@@ -6298,7 +6589,7 @@ export default function SuperAdminMasterDashboard() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-[#10233F] mb-1">
-                    Original Fee (₹)
+                    Original Fee (â‚¹)
                   </label>
                   <input
                     type="number"
@@ -6351,7 +6642,7 @@ export default function SuperAdminMasterDashboard() {
                   </div>
                   {newCourseThumbnail && (
                     <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                      ✓ Thumbnail Selected
+                      âœ“ Thumbnail Selected
                     </span>
                   )}
                 </div>
@@ -6597,7 +6888,7 @@ export default function SuperAdminMasterDashboard() {
                       }
                       className="text-[10px] text-[#89190E] font-bold hover:underline cursor-pointer"
                     >
-                      ⭐ Bunny Stream Preset
+                      â­ Bunny Stream Preset
                     </button>
                   </div>
                   <input
@@ -6649,7 +6940,7 @@ export default function SuperAdminMasterDashboard() {
         </div>
       )}
 
-      {/* ── MODAL 1: EDIT COURSE ────────────────────────────────────────── */}
+      {/* â”€â”€ MODAL 1: EDIT COURSE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {courseToEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#E8DCCB] relative max-h-[92vh] overflow-y-auto">
@@ -6744,7 +7035,7 @@ export default function SuperAdminMasterDashboard() {
               <div className="grid grid-cols-3 gap-3">
                 <div>
                   <label className="block text-xs font-bold uppercase text-[#10233F] mb-1">
-                    Offer Price (₹)
+                    Offer Price (â‚¹)
                   </label>
                   <input
                     type="number"
@@ -6755,7 +7046,7 @@ export default function SuperAdminMasterDashboard() {
                 </div>
                 <div>
                   <label className="block text-xs font-bold uppercase text-[#10233F] mb-1">
-                    Original Price (₹)
+                    Original Price (â‚¹)
                   </label>
                   <input
                     type="number"
@@ -6831,7 +7122,7 @@ export default function SuperAdminMasterDashboard() {
         </div>
       )}
 
-      {/* ── MODAL 2: EDIT FACULTY ───────────────────────────────────────── */}
+      {/* â”€â”€ MODAL 2: EDIT FACULTY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {facultyToEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#E8DCCB] relative max-h-[92vh] overflow-y-auto">
@@ -6974,7 +7265,7 @@ export default function SuperAdminMasterDashboard() {
         </div>
       )}
 
-      {/* ── MODAL 3: EDIT STUDENT ───────────────────────────────────────── */}
+      {/* â”€â”€ MODAL 3: EDIT STUDENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {studentToEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#E8DCCB] relative max-h-[92vh] overflow-y-auto">
@@ -7097,7 +7388,7 @@ export default function SuperAdminMasterDashboard() {
         </div>
       )}
 
-      {/* ── MODAL 4: EDIT RECEPTIONIST ───────────────────────────────────── */}
+      {/* â”€â”€ MODAL 4: EDIT RECEPTIONIST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {receptionistToEdit && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
           <div className="w-full max-w-lg bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-[#E8DCCB] relative max-h-[92vh] overflow-y-auto">
