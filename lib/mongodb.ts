@@ -103,13 +103,21 @@ export async function getMongoClient(): Promise<MongoClient | null> {
     return null;
   }
 
-
+  if (process.env.NODE_ENV === 'development') {
+    if (!global._mongoClientPromise) {
+      global._mongoClientPromise = connectClient(uri);
+    }
+    clientPromise = global._mongoClientPromise;
+  } else {
+    if (!clientPromise) {
+      clientPromise = connectClient(uri);
+    }
   }
 
-  clientPromise = global._mongoClientPromise;
-
   try {
-
+    return await clientPromise;
+  } catch (err) {
+    console.error('[MongoDB] Connection error:', err);
     global._mongoClientPromise = undefined;
     clientPromise = null;
     return null;
